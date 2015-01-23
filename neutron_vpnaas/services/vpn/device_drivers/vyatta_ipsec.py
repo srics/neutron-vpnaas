@@ -162,7 +162,7 @@ class VPNDriverMiddleware(device_drivers.DeviceDriver):
     rpc_endpoint_factory = None
 
     def __init__(self, vpn_service, host):
-        super(VPNDriverMiddleware, self).__init__(agent, host)
+        super(VPNDriverMiddleware, self).__init__(vpn_service.l3_agent, host)
         self.agent = vpn_service.l3_agent
         self.host = host
 

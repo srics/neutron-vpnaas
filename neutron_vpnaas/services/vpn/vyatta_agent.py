@@ -40,8 +40,8 @@ class VyattaVPNAgent(vyatta_l3.L3AgentMiddleware):
     def __init__(self, host, conf=None):
         super(VyattaVPNAgent, self).__init__(host, conf)
         # VPN device drivers
-        self.vpn_devices = [
-            vyatta_ipsec.VyattaIPSecDriver(self, host)]
+        # self.vpn_devices = [
+        #     vyatta_ipsec.VyattaIPSecDriver(self, host)]
         # NOTE: Temp location for creating service and loading drivers
         self.service = vpn_service.VPNService.instance(self)
         self.event_observers.add(self.service)
@@ -49,17 +49,17 @@ class VyattaVPNAgent(vyatta_l3.L3AgentMiddleware):
 
     def _router_added(self, router_id, router):
         super(VyattaVPNAgent, self)._router_added(router_id, router)
-        for device in self.vpn_devices:
+        for device in self.devices:
             device.create_router(router_id)
 
     def _router_removed(self, router_id):
-        for device in self.vpn_devices:
+        for device in self.devices:
             device.destroy_router(router_id)
         super(VyattaVPNAgent, self)._router_removed(router_id)
 
     def _process_router_if_compatible(self, router):
         super(VyattaVPNAgent, self)._process_router_if_compatible(router)
-        for device in self.vpn_devices:
+        for device in self.devices:
             device.sync(self.context, None)
 
 
