@@ -58,17 +58,23 @@ class VPNService(advanced_service.AdvancedService):
     # Overridden handlers for L3 agent events.
     def after_router_added(self, ri):
         """Create the router and sync for each loaded device driver."""
+        LOG.debug('Vyatta vRouter: vpn_service: Handling after_router_added for router_id: {0}'
+                      .format(ri.router_id))
         for device in self.devices:
             device.create_router(ri.router_id)
             device.sync(self.context, [ri.router])
 
     def after_router_removed(self, ri):
         """Remove the router from each loaded device driver."""
+        LOG.debug('Vyatta vRouter: vpn_service: Handling after_router_removed for router_id: {0}'
+                      .format(ri.router_id))
         for device in self.devices:
             device.destroy_router(ri.router_id)
 
     def after_router_updated(self, ri):
         """Perform a sync on each loaded device driver."""
+        LOG.debug('Vyatta vRouter: vpn_service: Handling after_router_updated for router_id: {0}'
+                      .format(ri.router_id))
         for device in self.devices:
             device.sync(self.context, [ri.router])
 

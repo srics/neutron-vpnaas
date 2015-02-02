@@ -47,17 +47,9 @@ class VyattaVPNAgent(vyatta_l3.L3AgentMiddleware):
         self.event_observers.add(self.service)
         self.devices = self.service.load_device_drivers(host)
 
-    def _router_added(self, router_id, router):
-        super(VyattaVPNAgent, self)._router_added(router_id, router)
-        for device in self.devices:
-            device.create_router(router_id)
-
-    def _router_removed(self, router_id):
-        for device in self.devices:
-            device.destroy_router(router_id)
-        super(VyattaVPNAgent, self)._router_removed(router_id)
 
     def _process_router_if_compatible(self, router):
+        LOG.debug('Vyatta vRouter: vyatta_agent: Handling _process_router_if_compatible')
         super(VyattaVPNAgent, self)._process_router_if_compatible(router)
         for device in self.devices:
             device.sync(self.context, None)

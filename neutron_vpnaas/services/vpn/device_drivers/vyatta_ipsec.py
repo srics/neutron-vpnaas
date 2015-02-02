@@ -184,8 +184,8 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
     """
     rpc_endpoint_factory = _DriverRPCEndpoint
 
-    def __init__(self, agent, host):
-        super(VyattaIPSecDriver, self).__init__(agent, host)
+    def __init__(self, vpn_service, host):
+        super(VyattaIPSecDriver, self).__init__(vpn_service, host)
 
         # create nova client instance
         # FIXME(dbogun): avoid copy/paste
@@ -219,6 +219,7 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
         """
         Called by _DriverRPCEndpoint instance.
         """
+        LOG.debug('Vyatta vRouter: vyatta_ipsec: Entering sync()')
         svc_update = self.server_api.get_vpn_services_on_host(
             context, self.host)
         to_del, to_change, to_add = self._svc_set_diff(
@@ -238,6 +239,8 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
         self._svc_cache = svc_update
 
     def create_router(self, router_id):
+        LOG.debug('Vyatta vRouter: vyatta_ipsec: Handling create_router for router_id: {0}'
+                      .format(router_id))
         vrouter = self.get_vrouter(router_id)
         config_raw = vrouter.get_vrouter_configuration()
         agent_svc = set((x['id'] for x in self._svc_cache))
@@ -275,6 +278,7 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
 
     # -- vpn state manipulation -------
     def _svc_add(self, svc, resources):
+        LOG.debug('Vyatta vRouter: vyatta_ipsec: Entering _svc_add()')
         vrouter = self.get_vrouter(svc['router_id'])
 
         for conn in svc[_KEY_CONNECTIONS]:
@@ -290,6 +294,7 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
         self._svc_delete(svc, resources)
 
     def _svc_delete(self, svc, resources):
+        LOG.debug('Vyatta vRouter: vyatta_ipsec: Entering _svc_delete()')
         vrouter = self.get_vrouter(svc['router_id'])
 
         for conn in svc[_KEY_CONNECTIONS]:
@@ -364,6 +369,7 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
 
     # -- helpers ----------------------
     def _connect_setup_commands(self, vrouter, svc, conn, resources):
+        LOG.debug('Vyatta vRouter: vyatta_ipsec: Entering _connect_setup_commands()')
         SCmd = vyatta_client.SetCmd
         batch = list()
 
@@ -402,6 +408,11 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
                 p, idx, urllib.quote_plus(svc['subnet']['cidr']))))
             batch.append(SCmd('{0}/tunnel/{1}/remote/prefix/{2}'.format(
                 p, idx, urllib.quote_plus(remote_cidr))))
+            LOG.debug('Vyatta vRouter: vyatta_ipsec: Add exclude NAT for router_id: {0}, iface: {1}, src_addr: {2}, dst_addr: {3}'
+                      .format(svc['router_id'], iface, svc['subnet']['cidr'], remote_cidr))
+            vrouter.add_snat_exclude_rule(batch, iface,
+                                          svc['subnet']['cidr'], remote_cidr)
+
         # TODO(dbogun): static routing for remote networks
         return batch
 
@@ -472,10 +483,18 @@ class VyattaIPSecDriver(VPNDriverMiddleware):
             #         iface)))
             pass
 
+        # Remove NAT exclude rules
+        for remote_cidr in conn['peer_cidrs']:
+            LOG.debug('Vyatta vRouter: vyatta_ipsec: Delete exclude NAT for router_id: {0}, iface: {1}, src_addr: {2}, dst_addr: {3}'
+                      .format(svc['router_id'], iface, svc['subnet']['cidr'], remote_cidr))
+            vrouter.delete_snat_exclude_rule(batch, iface,
+                                             svc['subnet']['cidr'], remote_cidr)
+
         resources.tunnel_release(conn, svc['external_ip'])
         return batch
 
     def _svc_diff(self, context, old, new):
+        LOG.debug('Vyatta vRouter: vyatta_ipsec: Entering _svc_diff()')
         assert old['router_id'] == new['router_id']
         vrouter = self.get_vrouter(old['router_id'])
 
